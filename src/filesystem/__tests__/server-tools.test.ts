@@ -2000,6 +2000,15 @@ describe("search_files", () => {
     ).toEqual([path.join(dir, "top.txt")]);
   });
 
+  // directory_tree reads the same excludePatterns and has always matched a bare
+  // name at any depth; search_files only matched it at the root, so
+  // "deeper" pruned "sub/deeper" for the tree but not for the search.
+  it("matches a bare exclude name at any depth, like directory_tree", async () => {
+    expect(
+      await search({ pattern: "**/*.txt", excludePatterns: ["deeper"] }),
+    ).toEqual([path.join(dir, "sub", "mid.txt"), path.join(dir, "top.txt")]);
+  });
+
   it('says "No matches found" when nothing matches', async () => {
     const result = await call(client, "search_files", {
       path: dir,

@@ -924,6 +924,39 @@ export async function headFile(
   }
 }
 
+/**
+ * Matches a path relative to the operation's root against a list of exclude
+ * patterns. `directory_tree` and `search_files` both read the same
+ * `excludePatterns` argument, so they share this predicate: a pattern with a
+ * wildcard is matched against the relative path as written, while a bare name
+ * also matches that name at any depth and the whole subtree below a directory
+ * with that name.
+ */
+/**
+ * Matches a path relative to the operation's root against a list of exclude
+ * patterns. `directory_tree` and `search_files` both read the same
+ * `excludePatterns` argument, so they share this predicate: a pattern with a
+ * wildcard is matched against the relative path as written, while a bare name
+ * also matches that name at any depth and the whole subtree below a directory
+ * with that name.
+ */
+export function isExcludedPath(
+  relativePath: string,
+  excludePatterns: readonly string[],
+): boolean {
+  return excludePatterns.some((pattern) => {
+    if (pattern.includes("*")) {
+      return minimatch(relativePath, pattern, { dot: true });
+    }
+    // For files: match exact name or as part of path
+    // For directories: match as directory path
+    return (
+      minimatch(relativePath, pattern, { dot: true }) ||
+      minimatch(relativePath, `**/${pattern}`, { dot: true }) ||
+      minimatch(relativePath, `**/${pattern}/**`, { dot: true })
+    );
+  });
+}
 export async function searchFilesWithValidation(
   rootPath: string,
   pattern: string,
@@ -944,9 +977,7 @@ export async function searchFilesWithValidation(
       // excluded subtree is never realpath'd or read (#4162): excluding a slow
       // provider folder keeps the walk from touching it at all.
       const relativePath = path.relative(rootPath, fullPath);
-      const shouldExclude = excludePatterns.some((excludePattern) =>
-        minimatch(relativePath, excludePattern, { dot: true }),
-      );
+      const shouldExclude = isExcludedPath(relativePath, excludePatterns);
       if (shouldExclude) continue;
 
       visit();

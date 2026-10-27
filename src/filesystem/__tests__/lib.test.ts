@@ -26,6 +26,7 @@ import {
   moveFile,
   // Search & filtering functions
   searchFilesWithValidation,
+  isExcludedPath,
   // File editing functions
   applyFileEdits,
   tailFile,
@@ -1209,5 +1210,33 @@ describe("Lib Functions", () => {
         expect(mockFileHandle.close).toHaveBeenCalled();
       });
     });
+  });
+});
+
+describe("isExcludedPath", () => {
+  it("matches a bare name at any depth, and everything below it", () => {
+    expect(isExcludedPath("node_modules", ["node_modules"])).toBe(true);
+    expect(isExcludedPath("packages/a/node_modules", ["node_modules"])).toBe(
+      true,
+    );
+    expect(
+      isExcludedPath("packages/a/node_modules/x.js", ["node_modules"]),
+    ).toBe(true);
+    expect(isExcludedPath("src/index.js", ["node_modules"])).toBe(false);
+  });
+
+  it("does not turn a bare name into a prefix match", () => {
+    expect(
+      isExcludedPath("nested/node_modules_old/x.js", ["node_modules"]),
+    ).toBe(false);
+    expect(isExcludedPath(".env", [".env"])).toBe(true);
+    expect(isExcludedPath(".env.local", [".env"])).toBe(false);
+  });
+
+  it("matches a wildcard pattern against the relative path only", () => {
+    // "*.log" does not cross a separator; "**/*.log" does.
+    expect(isExcludedPath("b.log", ["*.log"])).toBe(true);
+    expect(isExcludedPath("a/b.log", ["*.log"])).toBe(false);
+    expect(isExcludedPath("a/b.log", ["**/*.log"])).toBe(true);
   });
 });
